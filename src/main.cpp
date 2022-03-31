@@ -7,9 +7,6 @@
 #define B   A1
 #define C   A2
 
-// Last parameter = 'true' enables double-buffering, for flicker-free,
-// buttery smooth animation.  Note that NOTHING WILL SHOW ON THE DISPLAY
-// until the first call to swapBuffers().  This is normal.
 RGBmatrixPanel matrix(A, B, C, CLK, LAT, OE, false);
 
 // Similar to F(), but for PROGMEM string pointers rather than literals
@@ -90,8 +87,7 @@ void refreshScreen() {
     matrix.print(timerText[0]);
     matrix.drawRect(12,1,2,2,matrix.Color333(255,255,0));
     matrix.drawRect(12,4,2,2,matrix.Color333(255,255,0));
-//    matrix.setCursor(10, 0);
-//    matrix.print(":");
+
     matrix.setCursor(15, 0);
     matrix.print(timerText[1]);
 
