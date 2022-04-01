@@ -18,23 +18,29 @@ int second = 0;
 String minuteText = "2";
 String secondText = "00";
 
-long elapsedTime = 0;
+unsigned long elapsedTime = 0;
 
 unsigned int pointRed = 0;
 unsigned int pointBlue = 0;
 
 bool timerStarted = false;
+bool releaseTimer = false;
+unsigned long lastTick = 0;
+
+char timeToRelease = '5';
+int remainingTime = 5;
 
 String timerText[2];
 
 String tempText = "1 37";
 
-String incomingSerial;
+char incomingSerial;
 
 void refreshScreen();
 
 void tickTime();
 void readSerial();
+void updateTimeToRelease();
 
 void integerToString(int m, int s) {
     String mText = (String) m;
@@ -48,7 +54,7 @@ void integerToString(int m, int s) {
 }
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(9600);
 
     matrix.begin();
     matrix.setTextWrap(false); // Allow text to run off right edge
@@ -58,15 +64,41 @@ void setup() {
     refreshScreen();
 
     elapsedTime = millis();
+    lastTick = millis();
 }
 
 void loop() {
-    if (elapsedTime + 1000 <= millis() && timerStarted) {
-        tickTime();
-        refreshScreen();
-        elapsedTime = millis();
+    if (timerStarted) {
+        if (elapsedTime + 1000 <= millis()) {
+            tickTime();
+            refreshScreen();
+            elapsedTime = millis();
+        }
     }
+    if (releaseTimer){
+        if (lastTick + 1000 <= millis()){
+            updateTimeToRelease();
+            refreshScreen();
+            lastTick = millis();
+        }
+    }
+
     readSerial();
+    delay(20);
+}
+
+void updateTimeToRelease(){
+    if (remainingTime <= 0){
+        timeToRelease = 'R';
+    } else {
+        timeToRelease = ((String) remainingTime)[0];
+    }
+    if (remainingTime == -2){
+        timeToRelease = "";
+        releaseTimer = false;
+        remainingTime = 5;
+    }
+    else remainingTime--;
 }
 
 void tickTime() {
@@ -74,8 +106,11 @@ void tickTime() {
     if (second < 0) {
         second = 59;
         minute -= 1;
-        if (minute < 0)
-            minute = 2;
+        if (minute < 0) {
+            minute = 0;
+            second = 0;
+            timerStarted = false;
+        }
     }
     integerToString(minute, second);
 }
@@ -92,8 +127,13 @@ void refreshScreen() {
     matrix.print(timerText[1]);
 
 
+    if (pointRed < 10)
+        matrix.setCursor(8, 8);
+    else
+        matrix.setCursor(2, 8);
+
     matrix.setTextColor(matrix.Color333(255, 0, 0));
-    matrix.setCursor(8, 8);
+
     matrix.print((String) pointRed);
 
     matrix.fillRect(14, 11, 4, 1, matrix.Color333(70, 70, 70));
@@ -101,20 +141,35 @@ void refreshScreen() {
     matrix.setTextColor(matrix.Color333(0, 0, 255));
     matrix.setCursor(19, 8);
     matrix.print((String) pointBlue);
+
+    if (releaseTimer){
+        matrix.setCursor(0, 0);
+        matrix.setTextColor(matrix.Color333(255, 255, 255));
+        matrix.print(timeToRelease);
+    }
 }
 
 void readSerial() {
-    if (Serial.available() > 0) {
-        incomingSerial = Serial.readString();
-        switch (incomingSerial[0]) {
+    while (Serial.available() > 0) {
+//        Serial.println("Reading");
+        incomingSerial = Serial.read();
+        switch (incomingSerial) {
             case 'R': {
-                pointRed += 1;
-                refreshScreen();
+                if (Serial.available() > 0) {
+                    incomingSerial = Serial.read();
+                    pointRed += incomingSerial;
+//                    Serial.println(incomingSerial);
+                    refreshScreen();
+                }
                 break;
             }
             case 'B': {
-                pointBlue += 1;
-                refreshScreen();
+                if (Serial.available() > 0) {
+                    incomingSerial = Serial.read();
+                    pointBlue += incomingSerial;
+//                    Serial.println(incomingSerial);
+                    refreshScreen();
+                }
                 break;
             }
             case 'S': {
@@ -133,6 +188,15 @@ void readSerial() {
                 pointBlue = 0;
                 pointRed = 0;
                 refreshScreen();
+                break;
+            }
+            case 'F': {
+                if (timerStarted) {
+                    releaseTimer = !releaseTimer;
+                    if (!releaseTimer)
+                        remainingTime = 5;
+                    refreshScreen();
+                }
                 break;
             }
         }
