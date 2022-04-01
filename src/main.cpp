@@ -10,7 +10,7 @@
 RGBmatrixPanel matrix(A, B, C, CLK, LAT, OE, false);
 
 // Similar to F(), but for PROGMEM string pointers rather than literals
-//#define F2(progmem_ptr) (const __FlashStringHelper *)progmem_ptr
+#define F2(progmem_ptr) (const __FlashStringHelper *)progmem_ptr
 
 int minute = 2;
 int second = 0;
@@ -25,6 +25,7 @@ unsigned int pointBlue = 0;
 
 bool timerStarted = false;
 bool releaseTimer = false;
+
 unsigned long lastTick = 0;
 
 char timeToRelease = '5';
@@ -32,15 +33,30 @@ int remainingTime = 5;
 
 String timerText[2];
 
-String tempText = "1 37";
+int countdown = 3;
+String countdownText = "3";
+unsigned long lastCountdown = 0;
+bool countdownStarted = false;
+
+bool timerPaused = false;
 
 char incomingSerial;
 
 void refreshScreen();
 
 void tickTime();
+
 void readSerial();
+
 void updateTimeToRelease();
+
+void tickCountdown();
+
+const char str[]
+PROGMEM = "OFFLINE";
+int16_t textX = matrix.width(),
+        textMin = (int16_t)
+sizeof(str) * -12;
 
 void integerToString(int m, int s) {
     String mText = (String) m;
@@ -54,7 +70,7 @@ void integerToString(int m, int s) {
 }
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     matrix.begin();
     matrix.setTextWrap(false); // Allow text to run off right edge
@@ -65,40 +81,47 @@ void setup() {
 
     elapsedTime = millis();
     lastTick = millis();
+    lastCountdown = millis();
 }
 
 void loop() {
-    if (timerStarted) {
-        if (elapsedTime + 1000 <= millis()) {
+    if (elapsedTime + 1000 <= millis()) {
+        if (timerStarted) {
             tickTime();
             refreshScreen();
-            elapsedTime = millis();
+        } else if (countdownStarted) {
+            tickCountdown();
+            refreshScreen();
         }
+        elapsedTime = millis();
     }
-    if (releaseTimer){
-        if (lastTick + 1000 <= millis()){
+    if (releaseTimer) {
+        if (lastTick + 1000 <= millis()) {
             updateTimeToRelease();
             refreshScreen();
             lastTick = millis();
         }
     }
 
+    if (!timerStarted && !countdownStarted && !timerPaused) {
+        refreshScreen();
+    }
+
     readSerial();
     delay(20);
 }
 
-void updateTimeToRelease(){
-    if (remainingTime <= 0){
+void updateTimeToRelease() {
+    if (remainingTime <= 0) {
         timeToRelease = 'R';
     } else {
         timeToRelease = ((String) remainingTime)[0];
     }
-    if (remainingTime == -2){
+    if (remainingTime == -2) {
         timeToRelease = "";
         releaseTimer = false;
         remainingTime = 5;
-    }
-    else remainingTime--;
+    } else remainingTime--;
 }
 
 void tickTime() {
@@ -115,37 +138,73 @@ void tickTime() {
     integerToString(minute, second);
 }
 
+void tickCountdown() {
+    if (countdown == 0) {
+        countdownText = "GO!";
+        countdown--;
+    } else if (countdown == -1) {
+        timerStarted = true;
+        countdownStarted = false;
+        countdown = 3;
+    } else {
+        countdownText = ((String) countdown)[0];
+        countdown--;
+    }
+}
+
 void refreshScreen() {
     matrix.fillScreen(0);
-    matrix.setTextColor(matrix.Color333(255, 255, 0));
-    matrix.setCursor(6, 0);
-    matrix.print(timerText[0]);
-    matrix.drawRect(12,1,2,2,matrix.Color333(255,255,0));
-    matrix.drawRect(12,4,2,2,matrix.Color333(255,255,0));
+    if (timerStarted || timerPaused) {
+        matrix.setTextSize(1);
+        matrix.setTextColor(matrix.Color333(255, 255, 0));
+        matrix.setCursor(6, 0);
+        matrix.print(timerText[0]);
+        matrix.drawRect(12, 1, 2, 2, matrix.Color333(255, 255, 0));
+        matrix.drawRect(12, 4, 2, 2, matrix.Color333(255, 255, 0));
 
-    matrix.setCursor(15, 0);
-    matrix.print(timerText[1]);
+        matrix.setCursor(15, 0);
+        matrix.print(timerText[1]);
 
 
-    if (pointRed < 10)
-        matrix.setCursor(8, 8);
-    else
-        matrix.setCursor(2, 8);
+        if (pointRed < 10)
+            matrix.setCursor(8, 8);
+        else
+            matrix.setCursor(2, 8);
 
-    matrix.setTextColor(matrix.Color333(255, 0, 0));
+        matrix.setTextColor(matrix.Color333(255, 0, 0));
 
-    matrix.print((String) pointRed);
+        matrix.print((String) pointRed);
 
-    matrix.fillRect(14, 11, 4, 1, matrix.Color333(70, 70, 70));
+        matrix.fillRect(14, 11, 4, 1, matrix.Color333(70, 70, 70));
 
-    matrix.setTextColor(matrix.Color333(0, 0, 255));
-    matrix.setCursor(19, 8);
-    matrix.print((String) pointBlue);
+        matrix.setTextColor(matrix.Color333(0, 0, 255));
+        matrix.setCursor(19, 8);
+        matrix.print((String) pointBlue);
 
-    if (releaseTimer){
-        matrix.setCursor(0, 0);
-        matrix.setTextColor(matrix.Color333(255, 255, 255));
-        matrix.print(timeToRelease);
+        if (releaseTimer) {
+            matrix.setCursor(0, 0);
+            matrix.setTextColor(matrix.Color333(255, 255, 255));
+            matrix.print(timeToRelease);
+        }
+    } else if (countdownStarted) {
+        if (countdown != -1) {
+            matrix.setTextColor(matrix.Color333(255, 0, 0));
+            matrix.setCursor(11, 1);
+        }
+        else {
+            matrix.setTextColor(matrix.Color333(0, 255, 0));
+            matrix.setCursor(1, 1);
+        }
+        matrix.print(countdownText);
+        matrix.setTextSize(2);
+    } else if (!timerPaused) {
+        matrix.setTextSize(2);
+        matrix.setTextColor(matrix.Color333(255, 255, 0));
+        matrix.setCursor(textX, 1);
+        matrix.print(F2(str));
+
+        // Move text left (w/wrap), increase hue
+        if ((--textX) < textMin) textX = matrix.width();
     }
 }
 
@@ -157,7 +216,7 @@ void readSerial() {
             case 'R': {
                 if (Serial.available() > 0) {
                     incomingSerial = Serial.read();
-                    pointRed += incomingSerial;
+                    pointRed += incomingSerial - '0';
 //                    Serial.println(incomingSerial);
                     refreshScreen();
                 }
@@ -166,22 +225,25 @@ void readSerial() {
             case 'B': {
                 if (Serial.available() > 0) {
                     incomingSerial = Serial.read();
-                    pointBlue += incomingSerial;
+                    pointBlue += incomingSerial - '0';
 //                    Serial.println(incomingSerial);
                     refreshScreen();
                 }
                 break;
             }
             case 'S': {
-                timerStarted = true;
+                countdownStarted = true;
                 break;
             }
             case 'P': {
-                timerStarted = false;
+                timerStarted = !timerStarted;
+                timerPaused = !timerPaused;
                 break;
             }
             case 'Z': {
                 timerStarted = false;
+                timerPaused = false;
+                countdownStarted = false;
                 minute = 2;
                 second = 00;
                 integerToString(minute, second);
