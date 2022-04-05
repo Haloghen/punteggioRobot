@@ -103,9 +103,9 @@ void loop() {
         }
     }
 
-    if (!timerStarted && !countdownStarted && !timerPaused) {
-        refreshScreen();
-    }
+//    if (!timerStarted && !countdownStarted && !timerPaused) {
+//        refreshScreen();
+//    }
 
     readSerial();
     delay(20);
@@ -187,6 +187,7 @@ void refreshScreen() {
             matrix.print(timeToRelease);
         }
     } else if (countdownStarted) {
+        matrix.setTextSize(2);
         if (countdown != -1) {
             matrix.setTextColor(matrix.Color333(255, 0, 0));
             matrix.setCursor(11, 1);
@@ -196,15 +197,25 @@ void refreshScreen() {
             matrix.setCursor(1, 1);
         }
         matrix.print(countdownText);
-        matrix.setTextSize(2);
     } else if (!timerPaused) {
-        matrix.setTextSize(2);
-        matrix.setTextColor(matrix.Color333(255, 255, 0));
-        matrix.setCursor(textX, 1);
-        matrix.print(F2(str));
+//        matrix.fillScreen(matrix.Color888(10,10,10));
+        matrix.setTextSize(1);
+//        matrix.setTextColor(matrix.Color333(0, 0, 5));
+//        matrix.setCursor(2, 1);
+//        matrix.print("ROBOT");
+        matrix.setTextColor(matrix.Color333(0, 0, 255));
+        matrix.setCursor(1, 0);
+        matrix.print("ROBOT");
+
+//        matrix.setTextColor(matrix.Color888(20, 0, 0));
+//        matrix.setCursor(2, 9);
+//        matrix.print("ARENA");
+        matrix.setTextColor(matrix.Color333(255, 0, 0));
+        matrix.setCursor(1, 8);
+        matrix.print("ARENA");
 
         // Move text left (w/wrap), increase hue
-        if ((--textX) < textMin) textX = matrix.width();
+//        if ((--textX) < textMin) textX = matrix.width();
     }
 }
 
@@ -214,21 +225,23 @@ void readSerial() {
         incomingSerial = Serial.read();
         switch (incomingSerial) {
             case 'R': {
-                if (Serial.available() > 0) {
+//                if (Serial.available() > 0) {
+                    delay(20);
                     incomingSerial = Serial.read();
                     pointRed += incomingSerial - '0';
 //                    Serial.println(incomingSerial);
                     refreshScreen();
-                }
+//                }
                 break;
             }
             case 'B': {
-                if (Serial.available() > 0) {
-                    incomingSerial = Serial.read();
+//                if (Serial.available() > 0) {
+                delay(20);
+                incomingSerial = Serial.read();
                     pointBlue += incomingSerial - '0';
 //                    Serial.println(incomingSerial);
                     refreshScreen();
-                }
+//                }
                 break;
             }
             case 'S': {
@@ -244,6 +257,7 @@ void readSerial() {
                 timerStarted = false;
                 timerPaused = false;
                 countdownStarted = false;
+                countdown = 3;
                 minute = 2;
                 second = 00;
                 integerToString(minute, second);
