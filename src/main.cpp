@@ -42,6 +42,8 @@ bool timerPaused = false;
 
 char incomingSerial;
 
+bool reset = true;
+
 void refreshScreen();
 
 void tickTime();
@@ -154,16 +156,60 @@ void tickCountdown() {
 
 void refreshScreen() {
     matrix.fillScreen(0);
-    if (timerStarted || timerPaused) {
+    if (countdownStarted) {
+        matrix.setTextSize(2);
+        if (countdown != -1) {
+            matrix.
+                    setTextColor(matrix
+                                         .Color333(255, 0, 0));
+            matrix.setCursor(11, 1);
+        } else {
+            matrix.
+                    setTextColor(matrix
+                                         .Color333(0, 255, 0));
+            matrix.setCursor(1, 1);
+        }
+        matrix.
+                print(countdownText);
+    } else if (!
+                       timerPaused & reset
+            ) {
+//        matrix.fillScreen(matrix.Color888(10,10,10));
         matrix.setTextSize(1);
-        matrix.setTextColor(matrix.Color333(255, 255, 0));
+//        matrix.setTextColor(matrix.Color333(0, 0, 5));
+//        matrix.setCursor(2, 1);
+//        matrix.print("ROBOT");
+        matrix.
+                setTextColor(matrix
+                                     .Color333(0, 0, 255));
+        matrix.setCursor(1, 0);
+        matrix.print("ROBOT");
+
+//        matrix.setTextColor(matrix.Color888(20, 0, 0));
+//        matrix.setCursor(2, 9);
+//        matrix.print("ARENA");
+        matrix.
+                setTextColor(matrix
+                                     .Color333(255, 0, 0));
+        matrix.setCursor(1, 8);
+        matrix.print("ARENA");
+    }
+// Move text left (w/wrap), increase hue
+//        if ((--textX) < textMin) textX = matrix.width();
+    else {
+        matrix.setTextSize(1);
+        matrix.
+                setTextColor(matrix
+                                     .Color333(255, 255, 0));
         matrix.setCursor(6, 0);
-        matrix.print(timerText[0]);
+        matrix.
+                print(timerText[0]);
         matrix.drawRect(12, 1, 2, 2, matrix.Color333(255, 255, 0));
         matrix.drawRect(12, 4, 2, 2, matrix.Color333(255, 255, 0));
 
         matrix.setCursor(15, 0);
-        matrix.print(timerText[1]);
+        matrix.
+                print(timerText[1]);
 
 
         if (pointRed < 10)
@@ -171,51 +217,32 @@ void refreshScreen() {
         else
             matrix.setCursor(2, 8);
 
-        matrix.setTextColor(matrix.Color333(255, 0, 0));
+        matrix.
+                setTextColor(matrix
+                                     .Color333(255, 0, 0));
 
-        matrix.print((String) pointRed);
+        matrix.
+                print((String)
+                              pointRed);
 
         matrix.fillRect(14, 11, 4, 1, matrix.Color333(70, 70, 70));
 
-        matrix.setTextColor(matrix.Color333(0, 0, 255));
+        matrix.
+                setTextColor(matrix
+                                     .Color333(0, 0, 255));
         matrix.setCursor(19, 8);
-        matrix.print((String) pointBlue);
+        matrix.
+                print((String)
+                              pointBlue);
 
         if (releaseTimer) {
             matrix.setCursor(0, 0);
-            matrix.setTextColor(matrix.Color333(255, 255, 255));
-            matrix.print(timeToRelease);
+            matrix.
+                    setTextColor(matrix
+                                         .Color333(255, 255, 255));
+            matrix.
+                    print(timeToRelease);
         }
-    } else if (countdownStarted) {
-        matrix.setTextSize(2);
-        if (countdown != -1) {
-            matrix.setTextColor(matrix.Color333(255, 0, 0));
-            matrix.setCursor(11, 1);
-        }
-        else {
-            matrix.setTextColor(matrix.Color333(0, 255, 0));
-            matrix.setCursor(1, 1);
-        }
-        matrix.print(countdownText);
-    } else if (!timerPaused) {
-//        matrix.fillScreen(matrix.Color888(10,10,10));
-        matrix.setTextSize(1);
-//        matrix.setTextColor(matrix.Color333(0, 0, 5));
-//        matrix.setCursor(2, 1);
-//        matrix.print("ROBOT");
-        matrix.setTextColor(matrix.Color333(0, 0, 255));
-        matrix.setCursor(1, 0);
-        matrix.print("ROBOT");
-
-//        matrix.setTextColor(matrix.Color888(20, 0, 0));
-//        matrix.setCursor(2, 9);
-//        matrix.print("ARENA");
-        matrix.setTextColor(matrix.Color333(255, 0, 0));
-        matrix.setCursor(1, 8);
-        matrix.print("ARENA");
-
-        // Move text left (w/wrap), increase hue
-//        if ((--textX) < textMin) textX = matrix.width();
     }
 }
 
@@ -226,11 +253,11 @@ void readSerial() {
         switch (incomingSerial) {
             case 'R': {
 //                if (Serial.available() > 0) {
-                    delay(20);
-                    incomingSerial = Serial.read();
-                    pointRed += incomingSerial - '0';
+                delay(20);
+                incomingSerial = Serial.read();
+                pointRed += incomingSerial - '0';
 //                    Serial.println(incomingSerial);
-                    refreshScreen();
+                refreshScreen();
 //                }
                 break;
             }
@@ -238,14 +265,15 @@ void readSerial() {
 //                if (Serial.available() > 0) {
                 delay(20);
                 incomingSerial = Serial.read();
-                    pointBlue += incomingSerial - '0';
+                pointBlue += incomingSerial - '0';
 //                    Serial.println(incomingSerial);
-                    refreshScreen();
+                refreshScreen();
 //                }
                 break;
             }
             case 'S': {
                 countdownStarted = true;
+                reset = false;
                 break;
             }
             case 'P': {
@@ -257,6 +285,7 @@ void readSerial() {
                 timerStarted = false;
                 timerPaused = false;
                 countdownStarted = false;
+                reset = true;
                 countdown = 3;
                 minute = 2;
                 second = 00;
